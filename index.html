@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>За сообщением клиента — учебное демо</title><link rel="stylesheet" href="styles.css"><script src="script.js" defer></script></head>
+<body>
+<header><div class="brand"><span class="mark" aria-hidden="true">↗</span><div><h1>За сообщением клиента</h1><p>Рабочее место специалиста поддержки</p></div></div><div class="header-controls"><label for="scenario">Сценарий</label><select id="scenario"></select><button id="reset" class="quiet">Сбросить демо</button></div></header>
+<div class="meta"><span>Команда VottakayaSobachka</span><span>Учебное демо · Все данные вымышлены</span></div>
+<main><ol id="steps" class="steps" aria-label="Этапы работы"></ol>
+<div class="workspace">
+<section class="panel context"><div class="section-heading"><h2>Контекст клиента</h2><span class="eyebrow">01 / История</span></div><div id="context"></div></section>
+<section class="panel conversation"><div class="section-heading"><h2>Диалог</h2><span class="badge">Только внутри демо</span></div><div id="messages" class="messages" role="log" aria-label="Диалог с клиентом"></div><form id="reply-form" class="composer" novalidate><label for="reply">Ответ специалиста</label><textarea id="reply" rows="5" placeholder="Изучите контекст и подготовьте конкретный ответ…" aria-describedby="reply-error"></textarea><p id="reply-error" class="error"></p><div class="composer-bottom"><span>Сообщения никуда не отправляются</span><button type="submit" class="primary">Добавить ответ в демо</button></div></form></section>
+<section class="panel actions"><div class="section-heading"><h2>Действия</h2><span class="eyebrow">03 / Решение</span></div><div id="actions"></div></section>
+</div>
+<section class="product-bar"><div><h2>От обращения — к изменению процесса</h2><p>Сохраните наблюдение, подтверждения и гипотезу для продуктовой команды.</p></div><button id="product-toggle" aria-expanded="false" aria-controls="product">Обоснование для продуктовой команды <span aria-hidden="true">↗</span></button></section>
+<section id="product" class="panel" hidden><div class="section-heading"><div><h2>Обоснование для продуктовой команды</h2><p>Один случай — повод проверить гипотезу, а не готовая статистика.</p></div><button id="autofill">Заполнить из обращения</button></div><div class="product-grid"><form id="product-form" novalidate><div id="product-fields"></div><button class="primary" type="submit">Сформировать обоснование</button></form><div class="document"><h3>Предпросмотр документа</h3><p id="document-state" class="muted">Заполните поля и сформируйте документ.</p><pre id="document-text"></pre><div class="button-row"><button id="copy" disabled>Скопировать текст</button><button id="download" disabled>Скачать .txt</button></div><p class="muted">Обоснование сформировано локально и никуда не отправлено</p><div id="copy-fallback" hidden><label for="copy-text">Выделите текст и нажмите Ctrl+C или ⌘C</label><textarea id="copy-text" rows="8" readonly></textarea></div></div></div></section>
+<footer><span>Учебные процедуры · Не является системой или инструкцией Т-Банка</span><span id="storage-status"></span></footer>
+</main><div id="notice" role="status" aria-live="polite"></div>
+<dialog id="escalation"><form id="escalation-form" novalidate><div class="section-heading"><h2>Передача с контекстом</h2><button type="button" id="cancel-escalation">Отмена</button></div><p>Учебная передача не закрывает обращение. Ответственный продолжает сопровождение.</p><div id="escalation-fields"></div><button class="primary" type="submit">Зафиксировать передачу</button></form></dialog>
+<dialog id="confirm-dialog"><h2 id="confirm-title">Подтверждение</h2><p id="confirm-text"></p><div class="button-row"><button id="confirm-no">Отмена</button><button id="confirm-yes" class="primary">Подтвердить</button></div></dialog>
+</body></html>
