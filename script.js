@@ -13,7 +13,7 @@ const fresh=()=>({studied:false,questions:[],checks:[],action:null,escalation:nu
 let current='payment', states=Object.fromEntries(Object.keys(SCENARIOS).map(k=>[k,fresh()])),storage=true;
 try{localStorage.setItem(KEY+'-probe','1');localStorage.removeItem(KEY+'-probe');const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&saved.version===1){for(const k of Object.keys(states)){const s=saved.states?.[k];if(s&&Array.isArray(s.product)&&s.product.length===13&&Array.isArray(s.messages)&&Array.isArray(s.questions)&&Array.isArray(s.checks))states[k]={...fresh(),...s};}if(SCENARIOS[saved.current])current=saved.current;}}catch{storage=false;}
 const state=()=>states[current], scenario=()=>SCENARIOS[current], action=()=>scenario().actions.find(a=>a.id===state().action);
-function save(){try{if(storage)localStorage.setItem(KEY,JSON.stringify({version:1,current,states}));}catch{storage=false;}$('storage-status').textContent=storage?'Сохранение в этом браузере':'Работа в памяти · Сохранение недоступно';}
+function save(){try{if(storage)localStorage.setItem(KEY,JSON.stringify({version:1,current,states}));}catch{storage=false;}}
 let noticeTimer;function notify(text){$('notice').textContent=text;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').textContent='',5000);}
 function button(text,fn,disabled=false,cls='wide'){const b=el('button',text,cls);b.type='button';b.disabled=disabled;b.addEventListener('click',fn);return b;}
 function status(){const s=state();return s.closed?(current==='restricted'?'Консультация завершена':'Закрыто'):s.escalation&&!s.teamResult?'Ожидает профильную команду':'В работе';}
