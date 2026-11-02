@@ -17,22 +17,69 @@ function save(){try{if(storage)localStorage.setItem(KEY,JSON.stringify({version:
 let noticeTimer;function notify(text){$('notice').textContent=text;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').textContent='',5000);}
 function button(text,fn,disabled=false,cls='wide'){const b=el('button',text,cls);b.type='button';b.disabled=disabled;b.addEventListener('click',fn);return b;}
 function status(){const s=state();return s.closed?(current==='restricted'?'Консультация завершена':'Закрыто'):s.escalation&&!s.teamResult?'Ожидает профильную команду':'В работе';}
-function completeSecond(){return state().questions.length===scenario().questions.length&&state().checks.length===scenario().checks.length;}
+function completeSecond(){const s=state(),c=scenario();return s.studied&&c.questions.every((_,i)=>s.questions.includes(i))&&c.checks.every((_,i)=>s.checks.includes(i));}
 function stage(){return !state().studied?0:!completeSecond()?1:!state().sent?2:3;}
 function addMessage(role,text){state().messages.push({role,text});}
 function render(){const s=state(),c=scenario(),a=action();$('scenario').value=current;$('steps').replaceChildren();['Понять','Разобраться','Решить','Проверить'].forEach((title,i)=>{const done=i<stage()||(i===3&&s.closed);const li=el('li',undefined,done?'done':i===stage()?'current':'');li.append(el('span',done?'✓':String(i+1),'step-number'));const txt=el('div');txt.append(el('strong',title),el('small',done?'Выполнено':i===stage()?'Текущий этап':'Впереди'));li.append(txt);$('steps').append(li);});
  const ctx=$('context');ctx.replaceChildren();const client=el('div',undefined,'client');client.append(el('span',c.name.split(' ').map(x=>x[0]).join(''),'avatar'));const identity=el('div');identity.append(el('strong',c.name),el('div',c.id,'muted'));client.append(identity);ctx.append(client,el('span',c.type,'badge'),el('h3','История контактов'));const history=el('ol',undefined,'history');c.history.forEach(t=>history.append(el('li',t)));ctx.append(history);const summary=el('div',undefined,'callout');summary.append(el('strong','Краткая сводка'),el('p',c.summary),el('small','Заранее подготовлена · Проверьте по истории'));ctx.append(summary,el('h3','Что уже проверено'));const checks=el('ul',undefined,'check-list');[...c.checked,...s.checks.map(i=>c.checks[i])].forEach(t=>checks.append(el('li','✓ '+t)));ctx.append(checks);const own=el('div',undefined,'ownership');own.append(el('span',status(),'status'),el('p','Ответственный: '+(s.escalation?.owner||'Мария · Специалист поддержки')));if(a){own.append(el('p','Следующий шаг: '+(s.escalation?.reason||a.step)),el('p','Следующее обновление: '+(s.escalation?.update||a.update)));}if(s.escalation)own.append(el('p','Команда: '+s.escalation.team));if(s.closed)own.append(el('p',a.close));ctx.append(own);
  const log=$('messages');log.replaceChildren();[...c.messages.map(text=>({role:'client',text})),...s.messages].forEach(m=>{const node=el('div',undefined,'message '+m.role);node.append(el('small',m.role==='agent'?'Мария · Специалист':m.role==='system'?'Учебное событие':c.name),el('span',m.text));log.append(node);});log.scrollTop=log.scrollHeight;$('reply').value=s.draft;$('reply').disabled=s.closed;$('reply-form').querySelector('button').disabled=s.closed;
  renderActions();$('product').hidden=!s.productOpen;$('product-toggle').setAttribute('aria-expanded',String(s.productOpen));FIELDS.forEach((_,i)=>{$('product-'+i).value=s.product[i];});renderDocument();save();}
-function renderActions(){const box=$('actions'),s=state(),c=scenario(),a=action();box.replaceChildren();const hint=el('div',undefined,'callout');hint.append(el('strong','Подсказка copilot'),el('p',['Прочитайте историю. Не повторяйте уже выполненные проверки.','Уточните недостающее и отметьте проверку учебных данных.','Выберите допустимое действие и подготовьте конкретный ответ.','Проверьте результат: передача команде сама по себе не завершает работу.'][stage()]),el('small','Подготовленный текст · Решение принимает специалист'));box.append(hint,button(s.studied?'✓ Контекст изучен':'Контекст изучен',()=>{s.studied=true;render();},s.studied||s.closed,'primary wide'),el('h3','Уточнить ситуацию'));
- c.questions.forEach(([q,r],i)=>box.append(button(s.questions.includes(i)?'✓ '+q:q,()=>{s.questions.push(i);addMessage('agent',q);addMessage('client',r);render();},!s.studied||s.questions.includes(i)||s.closed)));
- box.append(el('h3','Проверить учебные данные'));c.checks.forEach((t,i)=>box.append(button((s.checks.includes(i)?'✓ ':'□ ')+t,()=>{s.checks.push(i);render();},!s.studied||s.checks.includes(i)||s.closed)));
- box.append(el('h3','Выбрать действие'));c.actions.forEach(x=>box.append(button(x.label,()=>{if(x.team)openEscalation(x);else choose(x);},!completeSecond()||s.sent||s.closed,'wide'+(a?.id===x.id?' chosen':''))));if(!completeSecond())box.append(el('p','Сначала изучите контекст, задайте вопросы и выполните проверки.','hint'));
- if(a){box.append(el('p','Следующий шаг: '+(s.escalation?.reason||a.step),'hint'),button('Подготовить ответ',()=>{const fill=()=>{s.draft=buildDraft();render();$('reply').focus();};if(s.draft.trim())confirmAction('Заменить черновик?','Текущий текст ответа будет заменён подготовленным.',fill);else fill();},s.closed,'primary wide'));}
- if(s.sent&&!s.closed){box.append(el('h3','Проверить результат'));if(s.escalation&&current!=='restricted'&&!s.teamResult){box.append(button(current==='payment'?'Смоделировать промежуточный статус':'Смоделировать результат команды',()=>{s.teamResult=true;addMessage('system',current==='payment'?'Техническая команда продолжает проверку. Срок решения неизвестен. Обращение остаётся в работе.':'Учебный результат команды: ошибочное списание скорректировано. Требуется подтверждение клиента.');render();}));}
- if(a.result&&(!s.escalation||s.teamResult||current==='restricted'))box.append(button(s.confirmed?'✓ Подтверждение клиента получено':'Смоделировать подтверждение клиента',()=>{addMessage('agent',current==='restricted'?'Подскажите, понятны ли дальнейшие шаги?':'Подскажите, решён ли вопрос?');addMessage('client',a.result);s.confirmed=true;render();},s.confirmed));
- box.append(button(current==='restricted'?'Завершить консультацию':'Закрыть обращение',()=>{s.closed=true;addMessage('system',a.close);render();notify('Результат зафиксирован.');},!s.confirmed,'primary wide'));if(!s.confirmed)box.append(el('p','Завершение доступно только после подтверждения клиента.','hint'));}
+function renderActions(){
+ const box=$('actions'),s=state(),c=scenario(),a=action(),phase=stage();
+ box.replaceChildren();
+ if(s.closed){box.append(el('div','✓ '+a.close,'callout'),el('p','Результат зафиксирован. Можно сформировать обоснование или выбрать другой сценарий.','hint'));return;}
+ const hint=el('div',undefined,'callout');
+ hint.append(el('strong',['Понять · Изучите контекст','Разобраться · Уточните и проверьте','Решить · Выберите следующий шаг','Проверить · Зафиксируйте результат'][phase]),el('p',['Прочитайте историю. Не повторяйте уже выполненные проверки.','Задайте оставшиеся вопросы и выполните проверки ниже. После этого откроется выбор действия.','Выберите допустимое действие, подготовьте ответ и добавьте его в диалог.','Передача команде не закрывает обращение. Дождитесь результата и подтверждения клиента.'][phase]),el('small','Подсказка copilot · Решение принимает специалист'));
+ box.append(hint);
+ if(phase===0){
+  box.append(button('Контекст изучен',()=>{s.studied=true;render();notify('Этап «Разобраться»: уточните ситуацию и проверьте данные.');},false,'primary wide'));
+  return;
+ }
+ if(phase===1){
+  const questionsDone=c.questions.filter((_,i)=>s.questions.includes(i)).length;
+  const checksDone=c.checks.filter((_,i)=>s.checks.includes(i)).length;
+  box.append(el('p','✓ Контекст изучен','hint'),el('h3','Уточнить ситуацию · '+questionsDone+' из '+c.questions.length));
+  c.questions.forEach(([q,r],i)=>{
+   if(s.questions.includes(i)){box.append(el('p','✓ '+q,'hint'));return;}
+   box.append(button(q,()=>{if(!s.questions.includes(i)){s.questions.push(i);addMessage('agent',q);addMessage('client',r);}render();}));
+  });
+  box.append(el('h3','Проверить учебные данные · '+checksDone+' из '+c.checks.length));
+  c.checks.forEach((t,i)=>{
+   if(s.checks.includes(i)){box.append(el('p','✓ '+t,'hint'));return;}
+   box.append(button('□ '+t,()=>{if(!s.checks.includes(i))s.checks.push(i);render();}));
+  });
+  return;
+ }
+ if(phase===2){
+  box.append(el('h3','Выбрать действие'));
+  c.actions.forEach(x=>box.append(button(x.label,()=>{if(x.team)openEscalation(x);else choose(x);},false,'wide'+(a?.id===x.id?' chosen':''))));
+  if(a){
+   box.append(el('p','Следующий шаг: '+(s.escalation?.reason||a.step),'hint'),button('Подготовить ответ',()=>{
+    const fill=()=>{s.draft=buildDraft();render();$('reply').focus();};
+    if(s.draft.trim())confirmAction('Заменить черновик?','Текущий текст ответа будет заменён подготовленным.',fill);else fill();
+   },false,'primary wide'),el('p','Проверьте текст в редакторе и нажмите «Добавить ответ в демо», чтобы перейти к проверке результата.','hint'));
+  }
+  return;
+ }
+ box.append(el('h3','Проверить результат'));
+ if(s.escalation&&current!=='restricted'&&!s.teamResult){
+  box.append(button(current==='payment'?'Смоделировать промежуточный статус':'Смоделировать результат команды',()=>{
+   s.teamResult=true;
+   addMessage('system',current==='payment'?'Техническая команда продолжает проверку. Срок решения неизвестен. Обращение остаётся в работе.':'Учебный результат команды: ошибочное списание скорректировано. Требуется подтверждение клиента.');
+   render();
+  }));
+ }
+ if(a.result&&(!s.escalation||s.teamResult||current==='restricted')){
+  if(s.confirmed)box.append(el('p','✓ Подтверждение клиента получено','hint'));
+  else box.append(button('Смоделировать подтверждение клиента',()=>{
+   addMessage('agent',current==='restricted'?'Подскажите, понятны ли дальнейшие шаги?':'Подскажите, решён ли вопрос?');
+   addMessage('client',a.result);s.confirmed=true;render();
+  }));
+ }
+ box.append(button(current==='restricted'?'Завершить консультацию':'Закрыть обращение',()=>{s.closed=true;addMessage('system',a.close);render();notify('Результат зафиксирован.');},!s.confirmed,'primary wide'));
+ if(!s.confirmed)box.append(el('p',current==='payment'&&s.escalation&&s.teamResult?'Проверка продолжается. В этой ветке обращение остаётся открытым; следующий шаг и время обновления сохранены.':'Завершение доступно только после подтверждения клиента.','hint'));
 }
+
 function choose(a,esc=null){const s=state();s.action=a.id;s.escalation=esc;s.draft='';s.sent=false;s.confirmed=false;s.teamResult=false;render();notify('Действие выбрано. Подготовьте и проверьте ответ.');}
 function buildDraft(){const a=action(),e=state().escalation;return a.draft+(e?' Команда: '+e.team+'. Ответственный: '+e.owner+'. Следующий шаг: '+e.reason+' Следующее сообщение: '+e.update+'. Это время обновления, а не гарантированный срок решения. Обращение остаётся открытым.':'');}
 function confirmAction(title,text,fn){$('confirm-title').textContent=title;$('confirm-text').textContent=text;$('confirm-dialog').showModal();$('confirm-yes').onclick=()=>{$('confirm-dialog').close();fn();};$('confirm-no').onclick=()=>$('confirm-dialog').close();}
